@@ -12,7 +12,7 @@ const useFetchVideos = () => {
 
     const loadVideos = async () => {
       try {
-        const res = await API.get("/saved-messages");
+        const res = await API.get("/api/telegram/saved-messages");
 
         if (!ignore) {
           const mediaMessages = res.data.messages.filter((msg) => msg.hasMedia);
