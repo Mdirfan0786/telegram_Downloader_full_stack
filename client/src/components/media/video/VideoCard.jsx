@@ -24,7 +24,9 @@ const VideoCard = ({ video, darkMode }) => {
   }, [mimeType, fileName]);
 
   const handleDownload = useCallback(() => {
-    window.open(`http://localhost:5000/api/telegram/download/${video.id}`);
+    window.open(
+      `${import.meta.env.VITE_API_URL}/api/telegram/download/${video.id}`,
+    );
   }, [video.id]);
 
   return (
