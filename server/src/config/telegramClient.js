@@ -10,7 +10,7 @@ const apiId = Number(process.env.API_ID);
 
 const apiHash = process.env.API_HASH;
 
-const stringSession = new StringSession(process.env.SESSION_STRING);
+const stringSession = new StringSession(process.env.STRING_SESSION);
 
 export const client = new TelegramClient(stringSession, apiId, apiHash, {
   connectionRetries: 5,
