@@ -1,33 +1,32 @@
 import { client } from "../config/telegramClient.js";
 
-// Connect to Telegram
+// Connect Telegram
 export const connectTelegram = async (req, res) => {
   try {
-    await client.connect();
-
     const me = await client.getMe();
 
-    res.json({
+    if (!me) {
+      return res.status(401).json({
+        success: false,
+        message: "Telegram client not connected",
+      });
+    }
+
+    res.status(200).json({
       success: true,
       message: "Telegram Connected Successfully",
-
       user: {
         id: me.id,
-
         firstName: me.firstName,
-
         username: me.username,
-
         phone: me.phone,
       },
     });
   } catch (error) {
-    console.log(error);
-
+    console.error("Connect Telegram Error:", error);
     res.status(500).json({
       success: false,
-
-      message: error.message,
+      message: error.message || "Failed to connect Telegram",
     });
   }
 };
@@ -35,68 +34,62 @@ export const connectTelegram = async (req, res) => {
 // Get Saved Messages
 export const getSavedMessages = async (req, res) => {
   try {
-    await client.connect();
-
-    const messages = await client.getMessages("me", {
-      limit: 50,
-    });
+    const messages = await client.getMessages("me", { limit: 50 });
 
     const formattedMessages = messages.map((msg) => {
       let mediaInfo = null;
 
       if (msg.media?.document) {
         const document = msg.media.document;
-
         const fileNameAttribute = document.attributes.find(
           (attr) => attr.fileName,
         );
 
         mediaInfo = {
-          fileName: fileNameAttribute?.fileName || "Unknown",
-
-          mimeType: document.mimeType,
-
+          fileName: fileNameAttribute?.fileName || "Unknown File",
+          mimeType: document.mimeType || "Unknown",
           size: document.size
-            ? (document.size / 1024 / 1024).toFixed(2) + " MB"
+            ? `${(document.size / 1024 / 1024).toFixed(2)} MB`
             : "Unknown",
+          // raw bytes for progress calculation on frontend
+          sizeBytes: Number(document.size) || 0,
         };
       }
 
       return {
         id: msg.id,
-
-        message: msg.message,
-
+        message: msg.message || "",
+        date: msg.date,
         hasMedia: !!msg.media,
-
         mediaInfo,
       };
     });
 
-    res.json({
+    res.status(200).json({
       success: true,
-
       count: formattedMessages.length,
-
       messages: formattedMessages,
     });
   } catch (error) {
-    console.log(error);
-
+    console.error("Get Saved Messages Error:", error);
     res.status(500).json({
       success: false,
-
-      message: error.message,
+      message: error.message || "Failed to fetch messages",
     });
   }
 };
 
-// Download Video
+// Download Video — Direct stream to browser (no disk save = faster)
 export const downloadVideo = async (req, res) => {
   try {
-    await client.connect();
-
     const { messageId } = req.params;
+
+    if (!messageId || isNaN(messageId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid message ID",
+      });
+    }
 
     const messages = await client.getMessages("me", {
       ids: Number(messageId),
@@ -104,51 +97,67 @@ export const downloadVideo = async (req, res) => {
 
     const message = messages[0];
 
-    if (!message || !message.media) {
+    if (!message) {
       return res.status(404).json({
         success: false,
+        message: "Message not found",
+      });
+    }
 
-        message: "Media not found",
+    if (!message.media?.document) {
+      return res.status(404).json({
+        success: false,
+        message: "No downloadable media found",
       });
     }
 
     const document = message.media.document;
 
     const fileNameAttribute = document.attributes.find((attr) => attr.fileName);
-
-    // Original filename
-    const originalFileName = fileNameAttribute?.fileName || "video.mp4";
-
-    // Safe filename for headers/browser
+    const originalFileName =
+      fileNameAttribute?.fileName || `telebox_${Date.now()}.mp4`;
     const safeFileName = originalFileName.replace(/[^a-zA-Z0-9.\-_]/g, "_");
 
-    // Headers
+    const mimeType = document.mimeType || "application/octet-stream";
+    const fileSize = document.size ? Number(document.size) : null;
+
+    // Set headers
     res.setHeader(
       "Content-Disposition",
       `attachment; filename="${safeFileName}"`,
     );
+    res.setHeader("Content-Type", mimeType);
+    if (fileSize) res.setHeader("Content-Length", fileSize);
+    // Allow frontend to read Content-Length for progress tracking
+    res.setHeader("Access-Control-Expose-Headers", "Content-Length");
 
-    res.setHeader(
-      "Content-Type",
-      document.mimeType || "application/octet-stream",
+    console.log(
+      `\nStreaming: ${safeFileName} (${fileSize ? (fileSize / 1024 / 1024).toFixed(2) + " MB" : "unknown size"})`,
     );
 
-    // Download media
-    await client.downloadMedia(message, {
-      outputFile: res,
+    // Stream directly to browser — fastest possible
+    // workers: 16 = max parallel chunk downloads from Telegram
+    const buffer = await client.downloadMedia(message, {
+      workers: 16,
+      progressCallback: (downloaded, total) => {
+        const pct = total
+          ? ((Number(downloaded) / Number(total)) * 100).toFixed(1)
+          : "?";
+        process.stdout.write(`\rDownloading: ${pct}%`);
+      },
     });
+
+    console.log(`\nDone: ${safeFileName}`);
+
+    // Send buffer directly
+    res.end(buffer);
   } catch (error) {
-    console.log(error);
-
-    res.status(500).json({
-      success: false,
-
-      message: error.message,
-    });
+    console.error("\nDownload Error:", error);
+    if (!res.headersSent) {
+      res.status(500).json({
+        success: false,
+        message: error.message || "Download failed",
+      });
+    }
   }
-};
-
-// MD IRFAN
-const hi = () => {
-  console.log("Md Irfan");
 };
