@@ -4,6 +4,8 @@ import { StringSession } from "telegram/sessions/index.js";
 
 import User from "../models/userModel.js";
 
+import generateToken from "../utils/generateToken.js";
+
 import { apiId, apiHash } from "../config/telegram.js";
 
 // Temporary login sessions
@@ -14,12 +16,23 @@ export const sendOtp = async (req, res) => {
   try {
     const { phone } = req.body;
 
+    // Validate phone
+    if (!phone) {
+      return res.status(400).json({
+        success: false,
+        message: "Phone number is required",
+      });
+    }
+
+    // Create temporary Telegram client
     const client = new TelegramClient(new StringSession(""), apiId, apiHash, {
       connectionRetries: 5,
     });
 
+    // Connect client
     await client.connect();
 
+    // Send OTP
     await client.sendCode(
       {
         apiId,
@@ -28,28 +41,37 @@ export const sendOtp = async (req, res) => {
       phone,
     );
 
-    // Store temporary client
+    // Store temporary session
     loginSessions[phone] = client;
 
-    res.json({
+    res.status(200).json({
       success: true,
       message: "OTP sent successfully",
     });
   } catch (error) {
-    console.log(error);
+    console.log("Send OTP Error:", error);
 
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: error.message || "Failed to send OTP",
     });
   }
 };
 
-// Verify OTP + Password
+// Verify Login (OTP + Optional 2FA Password)
 export const verifyLogin = async (req, res) => {
   try {
     const { phone, otp, password } = req.body;
 
+    // Validate fields
+    if (!phone || !otp) {
+      return res.status(400).json({
+        success: false,
+        message: "Phone and OTP are required",
+      });
+    }
+
+    // Get temporary Telegram client
     const client = loginSessions[phone];
 
     if (!client) {
@@ -59,7 +81,7 @@ export const verifyLogin = async (req, res) => {
       });
     }
 
-    // Full Telegram login flow
+    // Telegram login flow
     await client.start({
       phoneNumber: async () => phone,
 
@@ -72,10 +94,10 @@ export const verifyLogin = async (req, res) => {
       },
     });
 
-    // Save session
+    // Generate Telegram session string
     const stringSession = client.session.save();
 
-    // Save user
+    // Save or update user
     let user = await User.findOne({ phone });
 
     if (!user) {
@@ -89,12 +111,45 @@ export const verifyLogin = async (req, res) => {
       await user.save();
     }
 
-    res.json({
+    // Generate JWT token
+    const token = generateToken(user._id);
+
+    // Cleanup temporary session
+    delete loginSessions[phone];
+
+    res.status(200).json({
       success: true,
+
       message: "Login successful",
+
+      token,
+
+      user: {
+        id: user._id,
+
+        phone: user.phone,
+      },
     });
   } catch (error) {
-    console.log(error);
+    console.log("Verify Login Error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message || "Login failed",
+    });
+  }
+};
+
+// Get Current User
+export const getMe = async (req, res) => {
+  try {
+    res.status(200).json({
+      success: true,
+
+      user: req.user,
+    });
+  } catch (error) {
+    console.log("Get Me Error:", error);
 
     res.status(500).json({
       success: false,
