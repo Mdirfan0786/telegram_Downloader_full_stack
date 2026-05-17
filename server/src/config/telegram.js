@@ -6,9 +6,9 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const apiId = Number(process.env.API_ID);
+export const apiId = Number(process.env.API_ID);
 
-const apiHash = process.env.API_HASH;
+export const apiHash = process.env.API_HASH;
 
 const stringSession = new StringSession(process.env.STRING_SESSION);
 

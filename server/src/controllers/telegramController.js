@@ -1,4 +1,4 @@
-import { client } from "../config/telegramClient.js";
+import { client } from "../config/telegram.js";
 
 // Connect Telegram
 export const connectTelegram = async (req, res) => {
