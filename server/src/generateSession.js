@@ -6,7 +6,9 @@ import input from "input";
 
 import dotenv from "dotenv";
 
-dotenv.config();
+dotenv.config({
+  path: "../.env",
+});
 
 const apiId = Number(process.env.API_ID);
 
