@@ -1,40 +1,24 @@
-import { useState } from "react";
+import { Routes, Route } from "react-router-dom";
 
-import Navbar from "./components/layout/navbar/Navbar";
+import Login from "./pages/Login";
 
-import Footer from "./components/layout/footer/footer";
-
-import Home from "./pages/Home";
+import ProtectedRoute from "./components/common/ProtectedRoute";
+import Dashboard from "./pages/dashboard/Dashboard";
 
 function App() {
-  const [searchQuery, setSearchQuery] = useState("");
-
-  const [darkMode, setDarkMode] = useState(true);
-
   return (
-    <div
-      className={`
-        min-h-screen
-        transition-all
-        duration-300
+    <Routes>
+      <Route path="/login" element={<Login />} />
 
-        ${darkMode ? "bg-[#080c14] text-white" : "bg-[#f5f7fb] text-black"}
-      `}
-    >
-      {/* Navbar */}
-      <Navbar
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        darkMode={darkMode}
-        setDarkMode={setDarkMode}
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        }
       />
-
-      {/* Main */}
-      <Home searchQuery={searchQuery} darkMode={darkMode} />
-
-      {/* Footer */}
-      <Footer darkMode={darkMode} />
-    </div>
+    </Routes>
   );
 }
 
