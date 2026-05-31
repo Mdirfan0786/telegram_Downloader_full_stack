@@ -6,11 +6,27 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
+      trim: true,
     },
 
     stringSession: {
       type: String,
       required: true,
+    },
+
+    telegramId: {
+      type: Number,
+      default: null,
+    },
+
+    firstName: {
+      type: String,
+      default: "",
+    },
+
+    username: {
+      type: String,
+      default: "",
     },
   },
   {
