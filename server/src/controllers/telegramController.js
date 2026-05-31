@@ -49,6 +49,10 @@ export const getSavedMessages = async (req, res) => {
     // Logged-in user
     const user = req.user;
 
+    console.log("===== GET SAVED MESSAGES =====");
+
+    console.log("User:", req.user);
+
     // Create Telegram client
     const client = await createTelegramClient(user.stringSession);
 
