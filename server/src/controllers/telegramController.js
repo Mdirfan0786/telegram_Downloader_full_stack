@@ -1,13 +1,15 @@
-import { client } from "../config/telegram.js";
+import createTelegramClient from "../utils/createTelegramClient.js";
 
 // Connect Telegram
 export const connectTelegram = async (req, res) => {
   try {
-    // Ensure Telegram connection
-    if (!client.connected) {
-      await client.connect();
-    }
+    // Logged-in user
+    const user = req.user;
 
+    // Create Telegram client using user's session
+    const client = await createTelegramClient(user.stringSession);
+
+    // Get Telegram profile
     const me = await client.getMe();
 
     if (!me) {
@@ -23,8 +25,11 @@ export const connectTelegram = async (req, res) => {
 
       user: {
         id: me.id,
+
         firstName: me.firstName,
+
         username: me.username,
+
         phone: me.phone,
       },
     });
@@ -41,19 +46,22 @@ export const connectTelegram = async (req, res) => {
 // Get Saved Messages
 export const getSavedMessages = async (req, res) => {
   try {
-    // Ensure Telegram connection
-    if (!client.connected) {
-      await client.connect();
-    }
+    // Logged-in user
+    const user = req.user;
+
+    // Create Telegram client
+    const client = await createTelegramClient(user.stringSession);
 
     console.log("Fetching saved messages...");
 
+    // Fetch messages
     const messages = await client.getMessages("me", {
       limit: 50,
     });
 
     console.log(`Fetched ${messages.length} messages`);
 
+    // Format messages
     const formattedMessages = messages.map((msg) => {
       let mediaInfo = null;
 
@@ -112,6 +120,12 @@ export const getSavedMessages = async (req, res) => {
 // Download Video / Media
 export const downloadVideo = async (req, res) => {
   try {
+    // Logged-in user
+    const user = req.user;
+
+    // Create Telegram client
+    const client = await createTelegramClient(user.stringSession);
+
     const { messageId } = req.params;
 
     // Validate message ID

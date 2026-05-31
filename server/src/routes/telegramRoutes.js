@@ -5,13 +5,17 @@ import {
   getSavedMessages,
   downloadVideo,
 } from "../controllers/telegramController.js";
+import protect from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
-router.get("/connect", connectTelegram);
+// Connect Telegram
+router.get("/connect", protect, connectTelegram);
 
-router.get("/saved-messages", getSavedMessages);
+// Get Saved Messages
+router.get("/saved-messages", protect, getSavedMessages);
 
-router.get("/download/:messageId", downloadVideo);
+// Download Media
+router.get("/download/:messageId", protect, downloadVideo);
 
 export default router;
